@@ -71,17 +71,16 @@ export async function signIn(params: SignInParams) {
   const { email, idToken } = params;
 
   try {
-    // Verify the token is valid
-    await auth.verifyIdToken(idToken);
+    const userRecord = await auth.getUserByEmail(email);
+    if (!userRecord)
+      return {
+        success: false,
+        message: "User does not exist. Create an account.",
+      };
 
     await setSessionCookie(idToken);
-
-    return {
-      success: true,
-      message: "Signed in successfully.",
-    };
   } catch (error: any) {
-    console.error("Sign in error:", error);
+    console.log("");
 
     return {
       success: false,

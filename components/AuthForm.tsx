@@ -81,15 +81,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
           return;
         }
 
-        const result = await signIn({
+        await signIn({
           email,
           idToken,
         });
-
-        if (!result?.success) {
-          toast.error(result?.message || "Sign in failed. Please try again.");
-          return;
-        }
 
         toast.success("Signed in successfully.");
         router.push("/");
