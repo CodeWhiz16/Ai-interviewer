@@ -6,6 +6,9 @@ import { google } from "@ai-sdk/google";
 import { db } from "@/firebase/admin";
 import { feedbackSchema } from "@/constants";
 
+/**
+ * Generates and saves AI feedback based on an interview transcript.
+ */
 export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
@@ -66,12 +69,18 @@ export async function createFeedback(params: CreateFeedbackParams) {
   }
 }
 
+/**
+ * Fetches a single interview by its document ID.
+ */
 export async function getInterviewById(id: string): Promise<Interview | null> {
   const interview = await db.collection("interviews").doc(id).get();
 
   return interview.data() as Interview | null;
 }
 
+/**
+ * Fetches feedback associated with a specific interview.
+ */
 export async function getFeedbackByInterviewId(
   params: GetFeedbackByInterviewIdParams
 ): Promise<Feedback | null> {
@@ -90,10 +99,17 @@ export async function getFeedbackByInterviewId(
   return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
 
+/**
+ * Fetches public interviews taken by other users for the "Take Interviews" section.
+ * Includes defensive check to prevent Firestore crash if userId is undefined.
+ */
 export async function getLatestInterviews(
   params: GetLatestInterviewsParams
 ): Promise<Interview[] | null> {
   const { userId, limit = 20 } = params;
+
+  // Defensive Check: Stop the query if userId is missing to prevent 'undefined' crash
+  if (!userId) return []; 
 
   const interviews = await db
     .collection("interviews")
@@ -109,9 +125,16 @@ export async function getLatestInterviews(
   })) as Interview[];
 }
 
+/**
+ * Fetches all interviews completed by a specific user.
+ * Includes defensive check to prevent Firestore crash if userId is undefined.
+ */
 export async function getInterviewsByUserId(
   userId: string
 ): Promise<Interview[] | null> {
+  // Defensive Check: Stop the query if userId is missing to prevent 'undefined' crash
+  if (!userId) return []; 
+
   const interviews = await db
     .collection("interviews")
     .where("userId", "==", userId)

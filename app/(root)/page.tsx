@@ -13,13 +13,23 @@ import {
 async function Home() {
   const user = await getCurrentUser();
 
-  const [userInterviews, allInterview] = await Promise.all([
-    getInterviewsByUserId(user?.id!),
-    getLatestInterviews({ userId: user?.id! }),
-  ]);
+  // Initialize with empty arrays to prevent mapping errors
+  let userInterviews: any[] = [];
+  let allInterview: any[] = [];
 
-  const hasPastInterviews = userInterviews?.length! > 0;
-  const hasUpcomingInterviews = allInterview?.length! > 0;
+  // Only run database queries if a user session is active
+  if (user?.id) {
+    const [fetchedUserInterviews, fetchedAllInterviews] = await Promise.all([
+      getInterviewsByUserId(user.id),
+      getLatestInterviews({ userId: user.id }),
+    ]);
+
+    userInterviews = fetchedUserInterviews || [];
+    allInterview = fetchedAllInterviews || [];
+  }
+
+  const hasPastInterviews = userInterviews.length > 0;
+  const hasUpcomingInterviews = allInterview.length > 0;
 
   return (
     <>
@@ -49,7 +59,7 @@ async function Home() {
 
         <div className="interviews-section">
           {hasPastInterviews ? (
-            userInterviews?.map((interview) => (
+            userInterviews.map((interview) => (
               <InterviewCard
                 key={interview.id}
                 userId={user?.id}
@@ -71,7 +81,7 @@ async function Home() {
 
         <div className="interviews-section">
           {hasUpcomingInterviews ? (
-            allInterview?.map((interview) => (
+            allInterview.map((interview) => (
               <InterviewCard
                 key={interview.id}
                 userId={user?.id}
