@@ -18,7 +18,12 @@ export async function createFeedback(params: CreateFeedbackParams) {
       .join("");
 
     const { object } = await generateObject({
-      model: groq("llama-3.3-70b-versatile"), // 2. Updated to Groq model
+      model: groq("llama-3.3-70b-versatile"),
+      providerOptions: {
+    groq: {
+      structuredOutputs: false, // This forces the use of JSON mode instead of json_schema
+    },
+  },
       schema: feedbackSchema,
       prompt: `
         You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
