@@ -1,5 +1,6 @@
 import { generateText } from "ai";
-import { google } from "@ai-sdk/google";
+// import { google } from "@ai-sdk/google";
+import { groq } from "@ai-sdk/groq";
 
 import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
@@ -9,7 +10,9 @@ export async function POST(request: Request) {
 
   try {
     const { text: questions } = await generateText({
-      model: google("gemini-2.0-flash"),
+      // model: google("gemini-2.0-flash"),
+      model: groq("llama-3.1-8b-instant"),
+
       prompt: `Prepare questions for a job interview.
         The job role is ${role}.
         The job experience level is ${level}.
