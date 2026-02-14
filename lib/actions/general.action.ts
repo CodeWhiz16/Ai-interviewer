@@ -18,32 +18,38 @@ export async function createFeedback(params: CreateFeedbackParams) {
       .join("");
 
     const { object } = await generateObject({
-      model: groq("llama-3.3-70b-versatile"),
-      providerOptions: {
-        groq: {
-          structuredOutputs: false, // Use JSON mode
-        },
-      },
-      schema: feedbackSchema,
-      prompt: `
-        Analyze this mock interview transcript and return the feedback as a JSON object.
-        
-        Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.
-        
-        Transcript:
-        ${formattedTranscript}
+  model: groq("llama-3.3-70b-versatile"),
+  providerOptions: {
+    groq: {
+      structuredOutputs: false, // Compatibility for JSON mode
+    },
+  },
+  schema: feedbackSchema,
+  prompt: `
+    Analyze this mock interview transcript and return a JSON object that matches this EXACT structure:
+    {
+      "totalScore": number (0-100),
+      "categoryScores": [
+        { "name": "Communication Skills", "score": number, "comment": string },
+        { "name": "Technical Knowledge", "score": number, "comment": string },
+        { "name": "Problem Solving", "score": number, "comment": string },
+        { "name": "Cultural Fit", "score": number, "comment": string },
+        { "name": "Confidence and Clarity", "score": number, "comment": string }
+      ],
+      "strengths": string[],
+      "areasForImprovement": string[],
+      "finalAssessment": string
+    }
 
-        Please score the candidate from 0 to 100 in the following areas. Your response must be in valid JSON format:
-        - **Communication Skills**: Clarity, articulation, structured responses.
-        - **Technical Knowledge**: Understanding of key concepts for the role.
-        - **Problem-Solving**: Ability to analyze problems and propose solutions.
-        - **Cultural & Role Fit**: Alignment with company values and job role.
-        - **Confidence & Clarity**: Confidence in responses, engagement, and clarity.
-      `,
-      system:
-        "You are a professional interviewer. You must always respond with a valid JSON object matching the requested schema.",
-    });
+    Transcript:
+    ${formattedTranscript}
 
+    Evaluation Criteria:
+    - Be thorough and do not be lenient.
+    - Provide specific examples from the transcript in the comments.
+  `,
+  system: "You are a professional interviewer. You MUST always respond with a valid JSON object matching the requested schema. Do not include markdown code blocks or additional text.",
+});
     const feedback = {
       interviewId: interviewId,
       userId: userId,
