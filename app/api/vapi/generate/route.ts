@@ -19,21 +19,37 @@ export async function POST(request: Request) {
         The tech stack used in the job is: ${techstack}.
         The focus between behavioural and technical questions should lean towards: ${type}.
         The amount of questions required is: ${amount}.
-        Please return only the questions, without any additional text.
+        Please return ONLY a valid JSON array of strings, nothing else.
         The questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
-        Return the questions formatted like this:
+        Also escape any quotes within questions.
+        Return the questions in this exact format (no extra text):
         ["Question 1", "Question 2", "Question 3"]
         
         Thank you! <3
     `,
     });
 
+    // Extract JSON array from the response (in case there's extra text)
+    const jsonMatch = questions.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error(`No JSON array found in response: ${questions}`);
+    }
+    
+    let parsedQuestions;
+    try {
+      parsedQuestions = JSON.parse(jsonMatch[0]);
+    } catch (parseError) {
+      console.error("Original response:", questions);
+      console.error("Extracted JSON:", jsonMatch[0]);
+      throw new Error(`Failed to parse questions as JSON: ${parseError}`);
+    }
+
     const interview = {
       role: role,
       type: type,
       level: level,
       techstack: techstack.split(","),
-      questions: JSON.parse(questions),
+      questions: parsedQuestions,
       userId: userid,
       finalized: true,
       coverImage: getRandomInterviewCover(),
