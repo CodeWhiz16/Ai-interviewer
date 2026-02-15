@@ -31,26 +31,29 @@ const companies = [
 
   return (
     <>
-      <section className="card-cta">
-        <div className="flex flex-col gap-6 max-w-lg">
-          <h2>Get Interview-Ready with AI-Powered Practice & Feedback</h2>
-          <p className="text-lg">
-            Practice real interview questions & get instant feedback
-          </p>
+     <section className="card-cta bg-[url('/hero.png')] bg-cover bg-center bg-no-repeat">
 
-          <Button asChild className="btn-primary max-sm:w-full">
-            <Link href="/interview">Start an Interview</Link>
-          </Button>
-        </div>
- 
-        <Image
-          src="/robot.png"
-          alt="robo-dude"
-          width={400}
-          height={400}
-          className="max-sm:hidden"
-        />
-      </section>
+  <div className="flex flex-col gap-6 max-w-lg">
+    <h2>Get Interview-Ready with AI-Powered Practice & Feedback</h2>
+    <p className="text-lg">
+      Practice real interview questions & get instant feedback
+    </p>
+
+    <Button asChild className="btn-primary max-sm:w-full">
+      <Link href="/interview">Start an Interview</Link>
+    </Button>
+  </div>
+
+  <Image
+    src="/robot.png"
+    alt="robo-dude"
+    width={400}
+    height={400}
+    className="max-sm:hidden"
+  />
+
+</section>
+
 {/* 3. SLIDING COMPANY LOGOS */}
         <div className="w-full py-10 overflow-hidden  border-pink-100 ">
           
