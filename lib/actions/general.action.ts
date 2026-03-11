@@ -107,31 +107,54 @@ export async function getLatestInterviews(
 ): Promise<Interview[] | null> {
   const { userId, limit = 20 } = params;
 
-  const interviews = await db
+  // similar to getInterviewsByUserId we can't rely solely on a Firestore query
+  // because some documents might have been written with the wrong field name.
+  const snapshot = await db
     .collection("interviews")
     .orderBy("createdAt", "desc")
-    // .where("finalized", "==", true)
-    .where("userId", "!=", userId)
-    .limit(limit)
+    .limit(limit * 2) // fetch extra in case we drop some
     .get();
 
-  return interviews.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Interview[];
+  const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+
+  // filter out any doc where any of the potential userId fields match
+  const filtered = all.filter((i) => {
+    const owner =
+      i.userId || i.userid || i.UID || i.Uid || i.uid || "";
+    return owner !== userId;
+  });
+
+  // return up to requested limit after filtering
+  return (filtered.slice(0, limit) as Interview[]);
 }
 
 export async function getInterviewsByUserId(
   userId: string
 ): Promise<Interview[] | null> {
-  const interviews = await db
-    .collection("interviews")
-    .where("userId", "==", userId)
-    .orderBy("createdAt", "desc")
-    .get();
+  // Firestore queries don't easily support OR conditions across different field names,
+  // so we fetch all interviews and filter in memory. This allows us to handle cases
+  // where the document might have been written with "userid", "UID" or similar
+  // variations. We also log for debugging if any mismatched documents are found.
 
-  return interviews.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Interview[];
+  const snapshot = await db.collection("interviews").orderBy("createdAt", "desc").get();
+  const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+
+  const filtered = all.filter((i) => {
+    return (
+      i.userId === userId ||
+      i.userid === userId ||
+      i.UID === userId ||
+      i.Uid === userId ||
+      i.uid === userId
+    );
+  });
+
+  if (filtered.length !== all.length) {
+    console.log(
+      `getInterviewsByUserId: found ${filtered.length} matching docs out of ${all.length}`
+    );
+  }
+
+  // Cast back to Interview type; any extra fields don't hurt in UI
+  return filtered as Interview[];
 }

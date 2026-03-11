@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { z } from "zod";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,6 +9,7 @@ import { auth } from "@/firebase/client";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Mail, Lock, User, ArrowRight } from "lucide-react";
 
 import {
   createUserWithEmailAndPassword,
@@ -16,22 +18,24 @@ import {
 
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-
 import { signIn, signUp } from "@/lib/actions/auth.action";
 import FormField from "./FormField";
 
-const authFormSchema = (type: FormType) => {
+const authFormSchema = (type: "sign-in" | "sign-up") => {
   return z.object({
-    name: type === "sign-up" ? z.string().min(3) : z.string().optional(),
-    email: z.string().email(),
-    password: z.string().min(3),
+    name: type === "sign-up" ? z.string().min(3, "Name must be at least 3 characters") : z.string().optional(),
+    email: z.string().email("Please enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
   });
 };
 
-const AuthForm = ({ type }: { type: FormType }) => {
+const AuthForm = ({ type }: { type: "sign-in" | "sign-up" }) => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
+  const isSignIn = type === "sign-in";
   const formSchema = authFormSchema(type);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,15 +46,11 @@ const AuthForm = ({ type }: { type: FormType }) => {
   });
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
     try {
       if (type === "sign-up") {
         const { name, email, password } = data;
-
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         const result = await signUp({
           uid: userCredential.user.uid,
@@ -64,69 +64,70 @@ const AuthForm = ({ type }: { type: FormType }) => {
           return;
         }
 
-        toast.success("Account created successfully. Please sign in.");
+        toast.success("Account created! Let's get you signed in.");
         router.push("/sign-in");
       } else {
         const { email, password } = data;
-
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const idToken = await userCredential.user.getIdToken();
-        if (!idToken) {
-          toast.error("Sign in Failed. Please try again.");
-          return;
-        }
 
-        await signIn({
-          email,
-          idToken,
-        });
+        if (!idToken) throw new Error("Failed to retrieve authentication token.");
 
-        toast.success("Signed in successfully.");
+        await signIn({ email, idToken });
+        toast.success("Welcome back to Laksh.Ai");
         router.push("/");
       }
-    } catch (error) {
-      console.log(error);
-      toast.error(`There was an error: ${error}`);
+    } catch (error: any) {
+      console.error(error);
+      const message = error.code?.split('/')[1]?.replace(/-/g, ' ') || "Something went wrong.";
+      toast.error(`Authentication Failed: ${message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const isSignIn = type === "sign-in";
-
   return (
-    <div className="card-border lg:min-w-[566px]">
-      <div className="flex flex-col gap-6 card py-14 px-10">
-        <div className="flex flex-row gap-2 justify-center">
-          <Image src="/logo.svg" alt="logo" height={32} width={38} />
-          <h2 className="text-primary-100">PrepWise</h2>
+    <div className="relative flex flex-col w-full max-w-[450px] animate-in fade-in zoom-in duration-500">
+      {/* Decorative background glow */}
+      <div className="absolute -top-[10%] -left-[10%] w-[120%] h-[120%] bg-primary/5 rounded-full blur-3xl -z-10" />
+
+      <div className="flex flex-col gap-8 p-8 border border-white/10 bg-black/40 backdrop-blur-xl rounded-2xl shadow-2xl">
+        {/* Branding */}
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+            <Image src="/logo.png" alt="logo" height={40} width={40} className="object-contain" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold tracking-tight text-white">
+              {isSignIn ? "Welcome back" : "Create your account"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {isSignIn 
+                ? "Ready to ace your next interview?" 
+                : "Start your journey to professional excellence today."}
+            </p>
+          </div>
         </div>
 
-        <h3>Practice job interviews with AI</h3>
-
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="w-full space-y-6 mt-4 form"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {!isSignIn && (
-              <FormField
-                control={form.control}
-                name="name"
-                label="Name"
-                placeholder="Your Name"
-                type="text"
-              />
+              <div className="relative">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  label="Full Name"
+                  placeholder="John Doe"
+                  type="text"
+                />
+              </div>
             )}
 
             <FormField
               control={form.control}
               name="email"
-              label="Email"
-              placeholder="Your email address"
+              label="Email Address"
+              placeholder="name@company.com"
               type="email"
             />
 
@@ -134,26 +135,49 @@ const AuthForm = ({ type }: { type: FormType }) => {
               control={form.control}
               name="password"
               label="Password"
-              placeholder="Enter your password"
+              placeholder="••••••••"
               type="password"
             />
 
-            <Button className="btn" type="submit">
-              {isSignIn ? "Sign In" : "Create an Account"}
+            <Button 
+              disabled={isLoading} 
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+              type="submit"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  {isSignIn ? "Sign In" : "Get Started"}
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              )}
             </Button>
           </form>
         </Form>
 
-        <p className="text-center">
-          {isSignIn ? "No account yet?" : "Have an account already?"}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-[#0a0a0a] px-2 text-muted-foreground font-medium tracking-widest">OR</span>
+          </div>
+        </div>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {isSignIn ? "New to Laksh.Ai?" : "Already have an account?"}
           <Link
-            href={!isSignIn ? "/sign-in" : "/sign-up"}
-            className="font-bold text-user-primary ml-1"
+            href={isSignIn ? "/sign-up" : "/sign-in"}
+            className="ml-1.5 font-semibold text-primary hover:underline underline-offset-4 transition-all"
           >
-            {!isSignIn ? "Sign In" : "Sign Up"}
+            {isSignIn ? "Create account" : "Sign in here"}
           </Link>
         </p>
       </div>
+      
+      {/* Footer Note */}
+      <p className="mt-8 text-center text-xs text-muted-foreground/60 px-8">
+        By continuing, you agree to Laksh.Ai's Terms of Service and Privacy Policy.
+      </p>
     </div>
   );
 };

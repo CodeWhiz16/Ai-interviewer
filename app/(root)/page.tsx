@@ -18,8 +18,13 @@ async function Home() {
     getLatestInterviews({ userId: user?.id! }),
   ]);
 
-  const hasPastInterviews = userInterviews?.length! > 0;
-  const hasUpcomingInterviews = allInterview?.length! > 0;
+  const hasPastInterviews = (userInterviews?.length ?? 0) > 0;
+  const hasUpcomingInterviews = (allInterview?.length ?? 0) > 0;
+
+  // debug logs to make sure we're receiving interviews with correct ids
+  if (userInterviews && userInterviews.length > 0) {
+    console.log("Home component - userInterviews", userInterviews);
+  }
 
 const companies = [
     { name: "Google", logo: "/covers/spotify.png" }, // Reusing existing assets for demo
