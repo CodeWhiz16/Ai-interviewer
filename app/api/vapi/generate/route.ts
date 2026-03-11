@@ -6,23 +6,7 @@ import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 
 export async function POST(request: Request) {
-  // parse body flexibly to handle casing mismatches from the VAPI workflow
-  const body = await request.json();
-  const {
-    type,
-    role,
-    level,
-    techstack,
-    amount,
-    userid,
-    userId,
-    uid,
-    Uid,
-    UID,
-  } = body;
-
-  // prefer whichever user identifier is present
-  const userIdValue = userid || userId || uid || Uid || UID;
+  const { type, role, level, techstack, amount, userid } = await request.json();
 
   try {
     const { text: questions } = await generateText({
@@ -60,28 +44,17 @@ export async function POST(request: Request) {
       throw new Error(`Failed to parse questions as JSON: ${parseError}`);
     }
 
-    if (!userIdValue) {
-      console.error("generate route: missing user id in request body", body);
-      return Response.json(
-        { success: false, error: "Missing user id" },
-        { status: 400 }
-      );
-    }
-
     const interview = {
       role: role,
       type: type,
       level: level,
-      techstack: (typeof techstack === "string" ? techstack.split(",") : techstack),
+      techstack: techstack.split(","),
       questions: parsedQuestions,
-      // store the normalized user id so queries in the app can find it
-      userId: userIdValue,
+      userId: userid,
       finalized: true,
       coverImage: getRandomInterviewCover(),
       createdAt: new Date().toISOString(),
     };
-
-    console.log("creating interview for userId", userIdValue, "payload", body);
 
     await db.collection("interviews").add(interview);
 
